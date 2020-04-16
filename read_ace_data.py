@@ -6,6 +6,18 @@ import datetime
 from scipy.interpolate import interp1d # for afc correction
 from pathlib import Path
 
+import aceairsea as airsea 
+
+
+def ensure_tz_UTC(df):
+    # ensure tzinfo is in UTC
+    if (str(df.index.tzinfo)=='None'):
+        #print('The time stamp is provided is tz naive. It is assumed that the times provided are in UTC')
+        df=df.tz_localize(tz='UTC')
+    else:
+        #print('The provided time zone of the data is '+str(df.index.tzinfo)+'. This is now converted to a tz aware time stampe in UTC')
+        df.index=df.index.tz_convert('UTC')
+    return df
 
 def read_assimilation_list():
     UBXH3_file = Path('../local_data/77040_UBXH3_2017012618_2017021818.txt')
@@ -27,9 +39,10 @@ def read_distance2land():
         dist2land.rename(columns={'timest_': 'date_time'}, inplace=True)
     dist2land.set_index(pd.DatetimeIndex(dist2land.date_time), inplace=True) 
     dist2land.drop(columns=['date_time'], inplace=True)
-    dist2land=dist2land.tz_localize(tz='UTC')
     
-    if 1:
+    dist2land = ensure_tz_UTC(dist2land)
+    
+    if 1: # Fix for local data
         dist2land.index = dist2land.index-pd.Timedelta(2.5,'min') # move time stamp to interval center
     
     return dist2land
@@ -37,11 +50,14 @@ def read_distance2land():
 def read_era5_data():
     era5_csv_file = Path('../ecmwf-download/data/ecmwf-on-track/era5_ace_track_nearest.csv')
     era5 = pd.read_csv(era5_csv_file)
-    era5=era5.tz_localize(tz='UTC')
 
     if ('timest_' in era5.columns):
         era5.rename(columns={'timest_': 'date_time'}, inplace=True)
+    era5.set_index(pd.DatetimeIndex(era5.date_time), inplace=True) 
+    era5.drop(columns=['date_time'], inplace=True)
 
+    era5 = ensure_tz_UTC(era5)
+    
     era5['WS10']=np.sqrt( np.square(era5.u10)+np.square(era5.v10) ) # 10 meter wind speed (U_10)
     era5['WS10N']=np.sqrt( np.square(era5.u10n)+np.square(era5.v10n) ) # 10 meter NEUTRAL wind speed (U_10N)
 
@@ -52,35 +68,16 @@ def read_era5_data():
     era5['LMO'] = airsea.LMoninObukov_bulk(era5['WS10N'],-era5.msshf,-era5.mslhf,(era5.t2m-273.15)) # Monin-Obukov Length Scale
     era5['ustar'] = airsea.coare_u2ustar (era5['WS10N'], input_string='u2ustar', coare_version='coare3.5', TairC=(era5.t2m-273.15), z=10, zeta=0)
 
-    # calculate U30 (z=31.5)
-    zeta30 = Zanemometer/era5['LMO']
-    z30 = np.ones_like(era5['LMO'])*30
-    if 1:
-        z30[zeta30>5]=5*era5['LMO'][zeta30>5]
-        zeta30[zeta30>5]=5
-    era5['WS30'] = airsea.coare_u2ustar (era5['ustar'], input_string='ustar2u', coare_version='coare3.5', TairC=(era5.t2m-273.15), z=z30, zeta=zeta30)
-
-    if 0:
-        zeta10 = 10/era5['LMO']
-        z10 = np.ones_like(era5['LMO'])*10
-        z10[zeta10>5]=5*era5['LMO'][zeta10>5]
-        zeta10[zeta10>5]=5
-        era5['WS10_calc'] = airsea.coare_u2ustar (era5['ustar'], input_string='ustar2u', coare_version='coare3.5', TairC=(era5.t2m-273.15), z=z10, zeta=zeta10)
-
-    era5 = era5.assign( Urel = (era5.u10*era5.WS30/era5.WS10 - wind_m.velEast));  # relative wind speed in earth frame
-    era5 = era5.assign( Vrel = (era5.v10*era5.WS30/era5.WS10 - wind_m.velNorth)); # relative wind speed in earth frame
-    era5 = era5.assign( WSR = (np.sqrt(era5.Urel*era5.Urel+era5.Vrel*era5.Vrel)));
-    era5 = era5.assign( WDR = ((-wind_m.HEADING + 270 - np.rad2deg(np.arctan2(era5.Vrel, era5.Urel)) )% 360 ));    
-    era5 = era5.assign( WDIR=((270-np.rad2deg(np.arctan2(era5.v10,era5.u10))) % 360) ) # coming from direction
-
     era5['LSM']=era5['lsm']
     era5['SIF']=era5['siconc']
     era5.at[np.isnan(era5['SIF']),'SIF']=0
 
     #'T2M', 'LMO', 'SKT',
     era5['T2M']=era5['t2m']-273.15 # air temperatue in Celsius
-
+    
     return era5
+
+
 
 def read_and_filter_wind_data():
     wind_csv_file_folder = './data/summary_raw_wind_data_fr_10/'
@@ -182,14 +179,29 @@ def read_and_filter_wind_data():
     return df_wind
 
 def read_minute_ship_track():
-    gps_csv_file_folder = './data/?/'
-    gps_csv_file_folder = '../local_data/intermediate/ship_data/'
-    gps_csv_file_name = 'track_all_60seconds_filtered.csv'
-    df_gps = pd.read_csv(gps_csv_file_folder+gps_csv_file_name)
-    df_gps.rename(columns={'timest_': 'date_time'}, inplace=True)
+    if 0:
+        gps_csv_file_folder = './data/?/'
+        gps_csv_file_folder = '../local_data/intermediate/ship_data/'
+        gps_csv_file_name = 'track_all_60seconds_filtered.csv'
+
+        df_gps = pd.read_csv(gps_csv_file_folder+gps_csv_file_name)
+        df_gps.rename(columns={'timest_': 'date_time'}, inplace=True)
+
+        df_gps = df_gps.set_index(pd.to_datetime(df_gps.date_time, format="%Y-%m-%d %H:%M:%S")) # assing the time stamp
+        df_gps.drop(columns=['date_time'], inplace=True)
     
-    df_gps = df_gps.set_index(pd.to_datetime(df_gps.date_time, format="%Y-%m-%d %H:%M:%S")) # assing the time stamp
-    df_gps.drop(columns=['date_time'], inplace=True)
+    else:
+        gps_csv_file_folder = '../cruise-track-legs0-4/data/ship_track_velocity_onemin/'
+        gps_csv_file_name = 'cruise-track-1min-legs0-4.csv'
+        df_gps = pd.read_csv(gps_csv_file_folder+gps_csv_file_name)
+        df_gps = df_gps.set_index(pd.to_datetime(df_gps.date_time, format="%Y-%m-%dT%H:%M:%S")) # assing the time stamp
+        df_gps.drop(columns=['date_time'], inplace=True)
+        
+        df_gps = df_gps.rename(columns={'platform_speed_wrt_sea_water_east':'velEast', 
+                                          'platform_speed_wrt_sea_water_north':'velNorth', 
+                                          'platform_orientation':'HEADING', 
+                                          'platform_course':'COG', 
+                                          'platform_speed_wrt_ground':'SOG'})
     
     return df_gps
 

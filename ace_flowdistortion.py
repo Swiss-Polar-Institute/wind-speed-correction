@@ -6,8 +6,16 @@ import pandas as pd
 import numpy as np
 import datetime
 from scipy.interpolate import interp1d # for afc correction
+from sklearn.utils import resample # for bootstrapping
+
+
+from collections import defaultdict
+
+from pathlib import Path
 
 import windvectorcoordinates as wvc
+import aceairsea as aceairsea 
+import dataset as dataset
 
 def outliers_iqr_noise(ys, noise):
     """
@@ -228,9 +236,9 @@ def Rdir_bin_intervals_unique(R1,A1,S0,QC,binl,binu,min_in_bin=12,find_IQR_outli
     bin_data = defaultdict(list)
     outlier_mask = np.ones_like(QC) #
     outlier_count = np.zeros_like(QC) # count how often a point is flagged as outlier
-    binl=ang180(binl)
-    binu=ang180(binu)
-    R1=ang180(R1)
+    binl=wvc.ang180(binl)
+    binu=wvc.ang180(binu)
+    R1=wvc.ang180(R1)
     
     for jbin in np.arange(0,len(binl),1):
         if binl[jbin]<binu[jbin]:
@@ -301,7 +309,7 @@ def Rdir_bin_intervals_unique(R1,A1,S0,QC,binl,binu,min_in_bin=12,find_IQR_outli
             # need to bring lower part on top side, average and then ang180 again
             r1_Leq180 = R1[(((R1>=binl[jbin]) ) & QC & outlier_mask)]
             r1_Geq180 = R1[(((R1<binu[jbin]) ) & QC & outlier_mask)]
-            bin_data['x_mean'].append(ang180  ( np.nanmean( np.concatenate([r1_Leq180, (r1_Geq180+360) ]) ) ) )
+            bin_data['x_mean'].append(wvc.ang180  ( np.nanmean( np.concatenate([r1_Leq180, (r1_Geq180+360) ]) ) ) )
             
         bin_data['y_mean'].append(binMean)
         bin_data['y_median'].append(binMedian)
@@ -311,7 +319,7 @@ def Rdir_bin_intervals_unique(R1,A1,S0,QC,binl,binu,min_in_bin=12,find_IQR_outli
 
 
     bin_data = pd.DataFrame(bin_data)
-    bin_data['x_mean']=ang180(bin_data['x_mean'])
+    bin_data['x_mean']=wvc.ang180(bin_data['x_mean'])
     bin_data = bin_data.sort_values('x_mean') # sort along R1 direction
     return bin_data, outlier_mask, outlier_count
 
@@ -346,9 +354,9 @@ def tryoshnikov_afc_unique(t,d,s,D,S,S0, QC, high_res=False,find_IQR_outlier=Fal
     # winddirection bins are hardset inside this function, they need to be adapted to the dataset.
     min_in_bin = 12
 
-    R = ang180(d)
+    R = wvc.ang180(d)
     A = s/S
-    dD = ang180(ang180(d)-ang180(D))
+    dD = wvc.ang180(wvc.ang180(d)-wvc.ang180(D))
     if high_res:
         binl = np.concatenate( [np.arange(-180,-130,2), np.arange(-130,180,1)] ) # was at -140
         binu = np.concatenate( [np.arange(-180,-130,2)+10, np.arange(-130,180,1)+5] )
@@ -380,11 +388,63 @@ def tryoshnikov_afc_unique(t,d,s,D,S,S0, QC, high_res=False,find_IQR_outlier=Fal
     return radqc_, afc_
 
 
+def zeta_zu_zL_limited(LMO,zu):
+    """
+        Function to limit the ratio of z/L to 5
+        This is taken from  ‘Part IV : Physical Processes’. In IFS Documentation CY45R1. IFS Documentation 4. ECMWF, 2018. https://www.ecmwf.int/node/18714.
+        Section 3.2. THE SURFACE LAYER
+        "... In extremely stable situations, i.e. for very small positive L, the ratio z/L is large, resulting in unrealistic
+        profile shapes with standard stability functions. Therefore the ratio z/L is limited to 5 by defining a
+        height h such that h=L = 5. If z < h, then the profile functions described above, are used up to z = h
+        and the profiles are assumed to be uniform above that. This modification of the profiles for exceptionally
+        stable situations (no wind) is applied to the surface transfer formulation as well as to the interpolation
+        for post-processing."
+        
+        :param LMO:
+        :param zu:
+        
+        :returns: zeta:
+        :returns: zu:
+    """
+    zeta_limited = zu/LMO
+    zu_limited = np.ones_like(zeta_limited)*zu
+    zu_limited[zeta_limited>5]=5*LMO[zeta_limited>5]
+    zeta_limited[zeta_limited>5]=5
+    
+    return zeta_limited, zu_limited
 
-def flag_4DVAR_affected_data(wind_m):
+def expected_relative_wind(era5, wind_m, Zanemometer):
+    """
+        Function to calculate the expected relative wind speed (WSR) and expected relative wind direction (WDR) at the anemometer positions from the ERA-5 reference wind vector and the ships velocity and heading
+
+        :param era5: data fram with cloumns ['ustar', 'WS10', 'u10', 'v10', 'LMO']
+        :param wind_m: data fram with cloumns ['velEast', 'velNorth', 'HEADING']
+        :param Zanemometer: height of the anemometer above sea level [meter]
+         
+        :returns: era5: Dataframe era5 with additional columns ['Urel', 'Vrel', 'WSR', 'WDR', 'WDIR', 'WS30']
+    """
+    # calculate U30 (z=31.5)
+    #zeta30 = Zanemometer/era5['LMO']
+    #z30 = np.ones_like(era5['LMO'])*Zanemometer
+    #if 1:
+    #    z30[zeta30>5]=5*era5['LMO'][zeta30>5]
+    #    zeta30[zeta30>5]=5
+        
+    zeta30, z30 = zeta_zu_zL_limited(era5['LMO'],Zanemometer)
+    era5['WS30'] = aceairsea.coare_u2ustar (era5['ustar'], input_string='ustar2u', coare_version='coare3.5', TairC=(era5.t2m-273.15), z=z30, zeta=zeta30)
+
+    
+    era5 = era5.assign( Urel = (era5.u10*era5.WS30/era5.WS10 - wind_m.velEast));  # relative wind speed in earth frame
+    era5 = era5.assign( Vrel = (era5.v10*era5.WS30/era5.WS10 - wind_m.velNorth)); # relative wind speed in earth frame
+    era5 = era5.assign( WSR = (np.sqrt(era5.Urel*era5.Urel+era5.Vrel*era5.Vrel)));
+    era5 = era5.assign( WDR = ((-wind_m.HEADING + 270 - np.rad2deg(np.arctan2(era5.Vrel, era5.Urel)) )% 360 ));    
+    era5 = era5.assign( WDIR=((270-np.rad2deg(np.arctan2(era5.v10,era5.u10))) % 360) ) # coming from direction
+
+    return era5
+
+def flag_4DVAR_affected_data(UBXH3_assimilated, wind_m):
 
     # returns data frame with unified time stamp and column '4DVAR' = 1 if data is affected 
-    read_ace_data.UBXH3_assimilated = read_assimilation_list()
     # assume 9:00 to 21:00 and 21:00 to 9:00 windows are affected if one reading is within
     UBXH3_assimilated['4DVAR']=1
     UBXH3_4DVAR = pd.DataFrame(index=wind_m.index, columns=[])
@@ -406,25 +466,39 @@ def flag_4DVAR_affected_data(wind_m):
 
 if __name__ == "__main__":
     print('running the air flow distortion estimation and correction for the ACE data set')
-        
+    from pathlib import Path
+
     # import local functionalities
-    import aceairsea as airsea 
+    import aceairsea as aceairsea 
     import windvectorcoordinates as wvc
     import read_ace_data as read_ace_data
     
     
-    FOLD_out = '../../local_data/intermediate/ship_data/'
+    FOLD_out = '../local_data/intermediate/ship_data/'
     AFC_BASE_FILE_NAME = 'afc_era5_mean'
     afc_correction_factor_files = str(Path(FOLD_out, AFC_BASE_FILE_NAME))
     plot_folder = '../plots/'
     BOOTSTRAP = True # flag to calculate bin error form weighter mean formular of via bootstrap
     HIGH_RES = False # change this to true for better resolution of the correction factors (rejects 2% more outliers)
     
+    Zanemometer = 31.5 # estimated height of the anemometer above mean sea level [meter]
+    
     # read all required data
+    ###################################
+    # wind/gps-velocity data at 1 minute
     wind_m = read_ace_data.wind_merge_gps_afc_option(afc_correction_factor_files=[])
+    # resample to 5 minutes
+    wind_m = wvc.resample_wind_data(wind_m, Nmin=5, interval_center='odd', lon_flip_tollerance=0.0005)
+    # interpolate the 5min lat lon this does a good job.
+    wind_m.latitude = wind_m.latitude.interpolate()
+    wind_m.longitude = wind_m.longitude.interpolate()
+    
     era5 = read_ace_data.read_era5_data()
     dist2land = read_ace_data.read_distance2land()
-    UBXH3_4DVAR = flag_4DVAR_affected_data(wind_m)
+    UBXH3_assimilated = read_ace_data.read_assimilation_list()
+    
+    
+    UBXH3_4DVAR = flag_4DVAR_affected_data(UBXH3_assimilated, wind_m)
 
     if 1:
         era5 = pd.merge(era5, wind_m[['HEADING']], left_index=True,right_index=True, how='right')
@@ -433,6 +507,8 @@ if __name__ == "__main__":
         dist2land = pd.merge(dist2land, wind_m[['HEADING']], left_index=True,right_index=True, how='right')
         dist2land.drop(columns=['HEADING'], inplace=True)
 
+    # calculate the expected relative wind speed and direction at anemometer position and add these fileds to the era5 Dataframe
+    era5 = expected_relative_wind(era5, wind_m, Zanemometer)
         
     ###################################
     # estimate expected error in WSR_Model
@@ -458,8 +534,9 @@ if __name__ == "__main__":
     print([np.sum((QC_WDIR_DIFF==True) & (wind_m.WSR1>-1) )/np.sum(wind_m.WSR1>-1), np.sum((QC_WDIR_DIFF==True)), np.sum(wind_m.WSR1>-1)])
     print([np.sum((QC_WDIR_DIFF==True) & (wind_m.WSR2>-1) )/np.sum(wind_m.WSR2>-1), np.sum((QC_WDIR_DIFF==True)), np.sum(wind_m.WSR2>-1)])
     
+    print("Calculating the relative wind speed and direction ratio of sensor 1 and 2 (starboard and port sensor) ...")
     radqc_, afc_ = tryoshnikov_afc(wind_m.index,wind_m.WDR1,wind_m.WSR1,wind_m.WDR2,wind_m.WSR2, QC=(QC_WDIR_DIFF ), high_res=False,find_IQR_outlier=True, BOOTSTRAP=BOOTSTRAP)
-    
+    print("... done!")
         
     QC_ECMWF = (era5.WSR>2) & (era5.LSM==0) & (era5.SIF==0) & (Zanemometer/era5.LMO>-1.5) &  (Zanemometer/era5.LMO<.25) #10%correction
     print('QC_ECMWF==1: '+str(np.sum(QC_ECMWF)) )
@@ -474,10 +551,42 @@ if __name__ == "__main__":
     
     # calculate the correction factors
     # 
+    print("Calculating the flowdistortion bias of sensor 1 (starboard)")
     radqc_s1, afc_s1 = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR1,wind_m.WSR1,era5.WDR,era5.WSR,S0=era5.WS10N, QC=QC1, high_res=HIGH_RES,find_IQR_outlier=True, BOOTSTRAP=BOOTSTRAP, Weights_a=Weights_a1, Weights_d=Weights_d1  )
+    print("... done!")
+    
+    print("Calculating the flowdistortion bias of sensor 2 (port)")
     radqc_s2, afc_s2 = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR2,wind_m.WSR2,era5.WDR,era5.WSR,S0=era5.WS10N, QC=QC2, high_res=HIGH_RES,find_IQR_outlier=True, BOOTSTRAP=BOOTSTRAP, Weights_a=Weights_a2, Weights_d=Weights_d2  )
+    print("... done!")
+    
+    ##afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') )
+    ##afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') )
+    
+    wind_c = read_ace_data.wind_merge_gps_afc_option(afc_correction_factor_files=afc_correction_factor_files)
+    wind_c = wvc.resample_wind_data(wind_c, Nmin=5,interval_center='odd', lon_flip_tollerance=0.0005)
 
-    afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') )
-    afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') )
     
+    # take the average of sensor 1 and sensor 2
+    u = np.nanmean([wind_c.u1, wind_c.u2],axis=0);
+    v = np.nanmean([wind_c.v1, wind_c.v2],axis=0);
+    uR = np.nanmean([wind_c.uR1, wind_c.uR2],axis=0);
+    vR = np.nanmean([wind_c.vR1, wind_c.vR2],axis=0);
+    uz = np.sqrt(np.square(u)+np.square(v))
+    dir10 = (270 - np.rad2deg( np.arctan2( v, u ) ) ) % 360
+
+    # estimate u10N using the stability frm ERA-5
+    TairC=era5.T2M
     
+    zeta30, z30 = zeta_zu_zL_limited(era5['LMO']*np.square(uz/era5['WS30']),Zanemometer) # scale LMO with u10ratio^2  # this adjustment avoids overshooting corrections
+    
+    u10 = aceairsea.coare_u2ustar(aceairsea.coare_u2ustar(uz, input_string='u2ustar', coare_version='coare3.5', TairC=TairC, z=z30, zeta=zeta30), input_string='ustar2u', coare_version='coare3.5', TairC=TairC, z=10, zeta=0)
+
+    df_u10 = pd.DataFrame({'u10':u10,'dir10':dir10,'u_afc':u,'v_afc':v,'uR_afc':uR,'vR_afc':vR})#, 'u10_QC': u10_QC})
+    # WARNING here I CHANGE the time stamp label to interval end!!!
+    df_u10 = df_u10.set_index(wind_c.index+datetime.timedelta(seconds=(5*60*.5))) # change labelling to interval end!!!!!
+    df_u10.rename_axis('timest_',axis="index",inplace=True) #Alter the name of the index or columns.
+    #df_u10.to_csv(Path(FOLD_out, 'u10_ship_5min_full.csv'))
+
+
+
+
