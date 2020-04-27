@@ -6,10 +6,16 @@ import datetime
 from scipy.interpolate import interp1d # for afc correction
 from pathlib import Path
 
-import aceairsea as airsea 
+import aceairsea
 
 
 def ensure_tz_UTC(df):
+    """
+        Function to ensure that the tzinfo of a data frame is in UTC
+
+        :param df: a pandas data frame with datetime_index
+        :returns: the dataframe with df.index.tzinfo='UTC'
+    """
     # ensure tzinfo is in UTC
     if (str(df.index.tzinfo)=='None'):
         #print('The time stamp is provided is tz naive. It is assumed that the times provided are in UTC')
@@ -20,6 +26,12 @@ def ensure_tz_UTC(df):
     return df
 
 def read_assimilation_list():
+    """
+        Function to read the list of time stamps where data from UBXH3 was asssimilated
+
+        :returns: a dataframe with the assimilation time stamps
+    """
+    # TODO change path
     UBXH3_file = Path('../local_data/77040_UBXH3_2017012618_2017021818.txt')
     # read UTC, latitude, longitude of occations where station UBXH3 was assimilated into the IFS
     UBXH3_assimilated = pd.read_csv(UBXH3_file, header=None, delimiter=' +', parse_dates={'date_time':[1, 2]}, names=['station',  'yyyymmdd', 'hh', 'latitude', 'longitude'], engine='python')
@@ -31,9 +43,14 @@ def read_assimilation_list():
 
 
 def read_distance2land():
+    """
+        Function to read the ship's distance to land
 
+        :returns: a dataframe with the distance to land information
+    """
+    # TODO change path
     # NOTE UNITS OF distance are in meter!
-    dist2land_file = Path('../cruise-track-distance-to-land/data/dist_to_land_incl_small_islands.csv')
+    dist2land_file = Path('../cruise-track-distance-to-land/data/distance_to_land_corrected_on_small_islands/dist_to_land_incl_small_islands.csv')
     dist2land = pd.read_csv(dist2land_file)
     if ('timest_' in dist2land.columns):
         dist2land.rename(columns={'timest_': 'date_time'}, inplace=True)
@@ -42,14 +59,56 @@ def read_distance2land():
     
     dist2land = ensure_tz_UTC(dist2land)
     
-    if 1: # Fix for local data
+    if 0: # Fix for local data no longer needed
         dist2land.index = dist2land.index-pd.Timedelta(2.5,'min') # move time stamp to interval center
     
     return dist2land
 
 def read_era5_data():
-    era5_csv_file = Path('../ecmwf-download/data/ecmwf-on-track/era5_ace_track_nearest.csv')
+    """
+        Function to read the ERA-5 reanalysis data which was interpolated onto the ship's track.
+        Calculates the Obukov length scale
+
+        :returns: a dataframe with the interpolated ERA-5 reanalysis data
+    """
+    era5_csv_file = Path('../ecmwf-download/data/ecmwf-on-track/era5-on-cruise-track-5min-legs0-4-nearest.csv')
     era5 = pd.read_csv(era5_csv_file)
+    if 0:
+        era5.rename(columns={
+            '10m_u_component_of_neutral_wind':'u10n',
+            '10m_v_component_of_neutral_wind':'v10n',
+            '10m_u_component_of_wind':'u10',
+            '10m_v_component_of_wind':'v10',
+            'air_density_over_the_oceans':'p140209',
+            '2m_dewpoint_temperature':'d2m',
+            '2m_temperature':'t2m',
+            'boundary_layer_height':'blh',
+            'cloud_base_height':'cbh',
+            'convective_precipitation':'cp',
+            'convective_snowfall':'csf',
+            'friction_velocity':'zust',
+            'high_cloud_cover':'hcc',
+            'land_sea_mask':'lsm',
+            'lsp':'large_scale_precipitation',
+            'lsf':'large_scale_snowfall',
+            'lcc':'low_cloud_cover',
+            'mdts':'mean_direction_of_total_swell',
+            'mdww':'mean_direction_of_wind_waves',
+            'msqs':'mean_square_slope_of_waves',
+            'mslhf':'mean_surface_latent_heat_flux',
+            'msshf':'mean_surface_sensible_heat_flux',
+            'mcc':'medium_cloud_cover',
+            'pp1d':'peak_wave_period',
+            'tmax':'period_corresponding_to_maximum_individual_wave_height',
+            'siconc':'sea_ice_cover',
+            'sst':'sea_surface_temperature',
+            'shts':'significant_height_of_total_swell',
+            'shww':'significant_height_of_wind_waves',
+            'skt':'skin_temperature',
+            'tcc':'total_cloud_cover',
+            'tciw':'total_column_cloud_ice_water',
+            'tclw':'total_column_cloud_liquid_water'
+        }, inplace=True)
 
     if ('timest_' in era5.columns):
         era5.rename(columns={'timest_': 'date_time'}, inplace=True)
@@ -63,10 +122,12 @@ def read_era5_data():
 
     era5 = era5.assign(msshf_original = era5['msshf']) # copy of the orignal sensible heaf flux
     # here we fix the values of msshf near land to follow the bulk sea water behaviour
+    era5['sst'][0]=era5['sst'][np.where(era5['sst']>0)[0][0]] # first 8 entries are NaN need to fill first value for interpolation to work
+    era5['sst'] = era5['sst'].interpolate() # fill missing values with basic interpolation. This is good enough
     era5['msshf'][era5['lsm']>0] = (1.7*(era5['t2m']-era5['sst'])*era5['WS10N'])[era5['lsm']>0]
 
-    era5['LMO'] = airsea.LMoninObukov_bulk(era5['WS10N'],-era5.msshf,-era5.mslhf,(era5.t2m-273.15)) # Monin-Obukov Length Scale
-    era5['ustar'] = airsea.coare_u2ustar (era5['WS10N'], input_string='u2ustar', coare_version='coare3.5', TairC=(era5.t2m-273.15), z=10, zeta=0)
+    era5['LMO'] = aceairsea.LMoninObukov_bulk(era5['WS10N'],-era5.msshf,-era5.mslhf,(era5.t2m-273.15)) # Monin-Obukov Length Scale
+    era5['ustar'] = aceairsea.coare_u2ustar (era5['WS10N'], input_string='u2ustar', coare_version='coare3.5', TairC=(era5.t2m-273.15), z=10, zeta=0)
 
     era5['LSM']=era5['lsm']
     era5['SIF']=era5['siconc']

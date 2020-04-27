@@ -352,7 +352,7 @@ def tryoshnikov_afc_unique(t,d,s,D,S,S0, QC, high_res=False,find_IQR_outlier=Fal
     # run ratio and dirdiff analysis
     # optional filter based on IQR
     # winddirection bins are hardset inside this function, they need to be adapted to the dataset.
-    min_in_bin = 12
+    min_in_bin = 7#12
 
     R = wvc.ang180(d)
     A = s/S
@@ -475,11 +475,12 @@ if __name__ == "__main__":
     
     
     FOLD_out = '../local_data/intermediate/ship_data/'
-    AFC_BASE_FILE_NAME = 'afc_era5_mean'
+    FOLD_out = './data/afc_correction_factors/'
+    AFC_BASE_FILE_NAME = 'afc_era5_high_res_sensor'
     afc_correction_factor_files = str(Path(FOLD_out, AFC_BASE_FILE_NAME))
     plot_folder = '../plots/'
     BOOTSTRAP = True # flag to calculate bin error form weighter mean formular of via bootstrap
-    HIGH_RES = False # change this to true for better resolution of the correction factors (rejects 2% more outliers)
+    HIGH_RES = True # change this to true for better resolution of the correction factors (rejects 2% more outliers)
     
     Zanemometer = 31.5 # estimated height of the anemometer above mean sea level [meter]
     
@@ -487,11 +488,71 @@ if __name__ == "__main__":
     ###################################
     # wind/gps-velocity data at 1 minute
     wind_m = read_ace_data.wind_merge_gps_afc_option(afc_correction_factor_files=[])
+    
+    if 1:
+        # resample to 1 minutes
+        wind_1min = wvc.resample_wind_data(wind_m, Nmin=1, interval_center='odd', lon_flip_tollerance=0.0005)
+        wind_1min.latitude = wind_1min.latitude.interpolate()
+        wind_1min.longitude = wind_1min.longitude.interpolate()
+
+        wind_m_CF_stbd = wind_1min[['latitude','longitude', 'WDR1', 'WSR1','WD1','WS1','uR1', 'vR1', 'u1', 'v1']].copy()
+        wind_m_CF_port = wind_1min[['latitude','longitude', 'WDR2', 'WSR2','WD2','WS2','uR2', 'vR2', 'u2', 'v2']].copy()
+
+        wind_m_CF_stbd = wind_m_CF_stbd.rename(columns={'WDR1':'wind_from_direction_relative_to_platform', 
+                                                        'WSR1':'wind_speed_relative_to_platform',
+                                                        'WD1' : 'wind_from_direction',
+                                                        'WS1' : 'wind_speed',
+                                                        'uR1' : 'bowward_relative_wind',
+                                                        'vR1' : 'portward_relative_wind',
+                                                        'u1' : 'eastward_wind',
+                                                        'v1' : 'northward_wind',
+                                                       })
+        wind_m_CF_port = wind_m_CF_port.rename(columns={'WDR2':'wind_from_direction_relative_to_platform', 
+                                                        'WSR2':'wind_speed_relative_to_platform',
+                                                        'WD2' : 'wind_from_direction',
+                                                        'WS2' : 'wind_speed',
+                                                        'uR2' : 'bowward_relative_wind',
+                                                        'vR2' : 'portward_relative_wind',
+                                                        'u2' : 'eastward_wind',
+                                                        'v2' : 'northward_wind',
+                                                       })
+
+        wind_m_CF_stbd.to_csv('./data/wind_data_uncorrected_onemin/wind-observations-stbd-uncorrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+        wind_m_CF_port.to_csv('./data/wind_data_uncorrected_onemin/wind-observations-port-uncorrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+
+
+    
+    
     # resample to 5 minutes
-    wind_m = wvc.resample_wind_data(wind_m, Nmin=5, interval_center='odd', lon_flip_tollerance=0.0005)
+    wind_m = wvc.resample_wind_data(wind_m, Nmin=5, interval_center='odd', lon_flip_tollerance=0.01)
     # interpolate the 5min lat lon this does a good job.
     wind_m.latitude = wind_m.latitude.interpolate()
     wind_m.longitude = wind_m.longitude.interpolate()
+    
+    if 1:
+        wind_m_CF_stbd = wind_m[['latitude','longitude', 'WDR1', 'WSR1','WD1','WS1','uR1', 'vR1', 'u1', 'v1']].copy()
+        wind_m_CF_port = wind_m[['latitude','longitude', 'WDR2', 'WSR2','WD2','WS2','uR2', 'vR2', 'u2', 'v2']].copy()
+
+        wind_m_CF_stbd = wind_m_CF_stbd.rename(columns={'WDR1':'wind_from_direction_relative_to_platform', 
+                                                        'WSR1':'wind_speed_relative_to_platform',
+                                                        'WD1' : 'wind_from_direction',
+                                                        'WS1' : 'wind_speed',
+                                                        'uR1' : 'bowward_relative_wind',
+                                                        'vR1' : 'portward_relative_wind',
+                                                        'u1' : 'eastward_wind',
+                                                        'v1' : 'northward_wind',
+                                                       })
+        wind_m_CF_port = wind_m_CF_port.rename(columns={'WDR2':'wind_from_direction_relative_to_platform', 
+                                                        'WSR2':'wind_speed_relative_to_platform',
+                                                        'WD2' : 'wind_from_direction',
+                                                        'WS2' : 'wind_speed',
+                                                        'uR2' : 'bowward_relative_wind',
+                                                        'vR2' : 'portward_relative_wind',
+                                                        'u2' : 'eastward_wind',
+                                                        'v2' : 'northward_wind',
+                                                       })
+        wind_m_CF_stbd.to_csv('./data/wind_data_uncorrected_fivemin/wind-observations-stbd-uncorrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+        wind_m_CF_port.to_csv('./data/wind_data_uncorrected_fivemin/wind-observations-port-uncorrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
     
     era5 = read_ace_data.read_era5_data()
     dist2land = read_ace_data.read_distance2land()
@@ -559,12 +620,80 @@ if __name__ == "__main__":
     radqc_s2, afc_s2 = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR2,wind_m.WSR2,era5.WDR,era5.WSR,S0=era5.WS10N, QC=QC2, high_res=HIGH_RES,find_IQR_outlier=True, BOOTSTRAP=BOOTSTRAP, Weights_a=Weights_a2, Weights_d=Weights_d2  )
     print("... done!")
     
-    ##afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') )
-    ##afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') )
+    afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') )
+    afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') )
+    
+    if 1:
+        WSR_ERAminus5perc, WDR_ERAminus5perc = wvc.WSWD2WSRWDR(era5.WS30*0.95,era5.WDIR,wind_m.HEADING,wind_m.velEast,wind_m.velNorth) # basline
+        _, afc_s1_ERAminus5perc = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR1,wind_m.WSR1,WDR_ERAminus5perc,WSR_ERAminus5perc,S0=era5.WS10N, QC=(radqc_s1.QC), BOOTSTRAP=BOOTSTRAP, high_res=False,find_IQR_outlier=False, Weights_a=Weights_a1  )
+        _, afc_s2_ERAminus5perc = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR2,wind_m.WSR2,WDR_ERAminus5perc,WSR_ERAminus5perc,S0=era5.WS10N, QC=(radqc_s2.QC), BOOTSTRAP=BOOTSTRAP, high_res=False,find_IQR_outlier=False, Weights_a=Weights_a2  )
+
+        afc_s1_ERAminus5perc.to_csv( Path( FOLD_out + 'afc_era5-5perc_sensor1.csv') )
+        afc_s2_ERAminus5perc.to_csv( Path( FOLD_out + 'afc_era5-5perc_sensor2.csv') )
+
     
     wind_c = read_ace_data.wind_merge_gps_afc_option(afc_correction_factor_files=afc_correction_factor_files)
-    wind_c = wvc.resample_wind_data(wind_c, Nmin=5,interval_center='odd', lon_flip_tollerance=0.0005)
+    
+    if 1:
+        # resample to 1 minutes overwrite the same dataframe to safe space
+        wind_1min = wvc.resample_wind_data(wind_c, Nmin=1, interval_center='odd', lon_flip_tollerance=0.0005)
+        wind_1min.latitude = wind_1min.latitude.interpolate()
+        wind_1min.longitude = wind_1min.longitude.interpolate()
 
+        wind_c_CF_stbd = wind_1min[['latitude','longitude', 'WDR1', 'WSR1','WD1','WS1','uR1', 'vR1', 'u1', 'v1']].copy()
+        wind_c_CF_port = wind_1min[['latitude','longitude', 'WDR2', 'WSR2','WD2','WS2','uR2', 'vR2', 'u2', 'v2']].copy()
+
+        wind_c_CF_stbd = wind_c_CF_stbd.rename(columns={'WDR1':'wind_from_direction_relative_to_platform', 
+                                                        'WSR1':'wind_speed_relative_to_platform',
+                                                        'WD1' : 'wind_from_direction',
+                                                        'WS1' : 'wind_speed',
+                                                        'uR1' : 'bowward_relative_wind',
+                                                        'vR1' : 'portward_relative_wind',
+                                                        'u1' : 'eastward_wind',
+                                                        'v1' : 'northward_wind',
+                                                       })
+        wind_c_CF_port = wind_c_CF_port.rename(columns={'WDR2':'wind_from_direction_relative_to_platform', 
+                                                        'WSR2':'wind_speed_relative_to_platform',
+                                                        'WD2' : 'wind_from_direction',
+                                                        'WS2' : 'wind_speed',
+                                                        'uR2' : 'bowward_relative_wind',
+                                                        'vR2' : 'portward_relative_wind',
+                                                        'u2' : 'eastward_wind',
+                                                        'v2' : 'northward_wind',
+                                                       })
+
+        wind_c_CF_stbd.to_csv('./data/wind_data_corrected_onemin/wind-observations-stbd-corrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+        wind_c_CF_port.to_csv('./data/wind_data_corrected_onemin/wind-observations-port-corrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+
+    
+    
+    wind_c = wvc.resample_wind_data(wind_c, Nmin=5,interval_center='odd', lon_flip_tollerance=0.01)
+
+    if 1:
+        wind_c_CF_stbd = wind_c[['latitude','longitude', 'WDR1', 'WSR1','WD1','WS1','uR1', 'vR1', 'u1', 'v1']].copy()
+        wind_c_CF_port = wind_c[['latitude','longitude', 'WDR2', 'WSR2','WD2','WS2','uR2', 'vR2', 'u2', 'v2']].copy()
+
+        wind_c_CF_stbd = wind_c_CF_stbd.rename(columns={'WDR1':'wind_from_direction_relative_to_platform', 
+                                                        'WSR1':'wind_speed_relative_to_platform',
+                                                        'WD1' : 'wind_from_direction',
+                                                        'WS1' : 'wind_speed',
+                                                        'uR1' : 'bowward_relative_wind',
+                                                        'vR1' : 'portward_relative_wind',
+                                                        'u1' : 'eastward_wind',
+                                                        'v1' : 'northward_wind',
+                                                       })
+        wind_c_CF_port = wind_c_CF_port.rename(columns={'WDR2':'wind_from_direction_relative_to_platform', 
+                                                        'WSR2':'wind_speed_relative_to_platform',
+                                                        'WD2' : 'wind_from_direction',
+                                                        'WS2' : 'wind_speed',
+                                                        'uR2' : 'bowward_relative_wind',
+                                                        'vR2' : 'portward_relative_wind',
+                                                        'u2' : 'eastward_wind',
+                                                        'v2' : 'northward_wind',
+                                                       })
+        wind_c_CF_stbd.to_csv('./data/wind_data_corrected_fivemin/wind-observations-stbd-corrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+        wind_c_CF_port.to_csv('./data/wind_data_corrected_fivemin/wind-observations-port-corrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+    
     
     # take the average of sensor 1 and sensor 2
     u = np.nanmean([wind_c.u1, wind_c.u2],axis=0);
@@ -581,11 +710,30 @@ if __name__ == "__main__":
     
     u10 = aceairsea.coare_u2ustar(aceairsea.coare_u2ustar(uz, input_string='u2ustar', coare_version='coare3.5', TairC=TairC, z=z30, zeta=zeta30), input_string='ustar2u', coare_version='coare3.5', TairC=TairC, z=10, zeta=0)
 
-    df_u10 = pd.DataFrame({'u10':u10,'dir10':dir10,'u_afc':u,'v_afc':v,'uR_afc':uR,'vR_afc':vR})#, 'u10_QC': u10_QC})
-    # WARNING here I CHANGE the time stamp label to interval end!!!
-    df_u10 = df_u10.set_index(wind_c.index+datetime.timedelta(seconds=(5*60*.5))) # change labelling to interval end!!!!!
-    df_u10.rename_axis('timest_',axis="index",inplace=True) #Alter the name of the index or columns.
+    wind_c_CF = wind_c_CF_stbd.copy()
+    wind_c_CF['wind_from_direction_relative_to_platform'] = (180-np.rad2deg(np.arctan2(vR,uR) ) )%360
+    wind_c_CF['wind_speed_relative_to_platform'] = np.sqrt(np.square(uR)+np.square(vR))
+    wind_c_CF['wind_from_direction'] = dir10
+    wind_c_CF['wind_speed'] = uz
+    wind_c_CF['bowward_relative_wind'] = uR
+    wind_c_CF['portward_relative_wind'] = vR
+    wind_c_CF['eastward_wind'] = u
+    wind_c_CF['northward_wind'] = v
+    wind_c_CF['10m_neutral_wind_speed'] = u10
+    #10m_v_component_of_neutral_wind
+    
+    if 1: # safing for asaid
+        df_u10 = pd.DataFrame({'u10':u10,'dir10':dir10,'u_afc':u,'v_afc':v,'uR_afc':uR,'vR_afc':vR})#, 'u10_QC': u10_QC})
+        # WARNING here I CHANGE the time stamp label to interval end!!!
+        df_u10 = df_u10.set_index(wind_c.index+datetime.timedelta(seconds=(5*60*.5))) # change labelling to interval end!!!!!
+        df_u10.rename_axis('timest_',axis="index",inplace=True) #Alter the name of the index or columns.
+        df_u10 = df_u10.tz_convert(None)
+        df_u10.to_csv(Path('../asaid/data/raw/0_shipdata/', 'u10_ship_5min_full.csv'))
+
     #df_u10.to_csv(Path(FOLD_out, 'u10_ship_5min_full.csv'))
+    
+    
+    
 
 
 
