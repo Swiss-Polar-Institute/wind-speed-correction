@@ -13,9 +13,9 @@ from collections import defaultdict
 
 from pathlib import Path
 
-import windvectorcoordinates as wvc
-import aceairsea as aceairsea 
-import dataset as dataset
+from pyantarctica import windvectorcoordinates as wvc
+from pyantarctica import aceairsea as aceairsea 
+from pyantarctica import dataset as dataset
 
 def outliers_iqr_noise(ys, noise):
     """

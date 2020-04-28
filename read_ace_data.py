@@ -32,7 +32,7 @@ def read_assimilation_list():
         :returns: a dataframe with the assimilation time stamps
     """
     # TODO change path
-    UBXH3_file = Path('../local_data/77040_UBXH3_2017012618_2017021818.txt')
+    UBXH3_file = Path('./data/ubxh3_assimilation_list/77040_UBXH3_2017012618_2017021818.txt')
     # read UTC, latitude, longitude of occations where station UBXH3 was assimilated into the IFS
     UBXH3_assimilated = pd.read_csv(UBXH3_file, header=None, delimiter=' +', parse_dates={'date_time':[1, 2]}, names=['station',  'yyyymmdd', 'hh', 'latitude', 'longitude'], engine='python')
     UBXH3_assimilated.set_index( (pd.to_datetime(UBXH3_assimilated.date_time, format="%Y-%m-%d %H:%M:%S")), drop=True, inplace=True )
@@ -141,9 +141,8 @@ def read_era5_data():
 
 
 def read_and_filter_wind_data():
-    wind_csv_file_folder = './data/summary_raw_wind_data_fr_10/'
-    wind_csv_file_folder = '../cruise-track-legs0-4/data/summary_raw_wind_data_fr_10/' # hack to not have to import the data here rigth now
-    wind_csv_file_name0 = 'metdata_wind_20161119_20161216.csv'
+    wind_csv_file_folder = './data/summary_raw_wind_data_fr_11/'
+    wind_csv_file_name0 = 'metdata_wind_20161117_20161216.csv'
     wind_csv_file_name1 = 'metdata_wind_20161220_20170118.csv'
     wind_csv_file_name2 = 'metdata_wind_20170122_20170223.csv'
     wind_csv_file_name3 = 'metdata_wind_20170226_20170319.csv'
@@ -252,7 +251,7 @@ def read_minute_ship_track():
         df_gps.drop(columns=['date_time'], inplace=True)
     
     else:
-        gps_csv_file_folder = '../cruise-track-legs0-4/data/ship_track_velocity_onemin/'
+        gps_csv_file_folder = './data/oneminute_average_cruis_11/'
         gps_csv_file_name = 'cruise-track-1min-legs0-4.csv'
         df_gps = pd.read_csv(gps_csv_file_folder+gps_csv_file_name)
         df_gps = df_gps.set_index(pd.to_datetime(df_gps.date_time, format="%Y-%m-%dT%H:%M:%S")) # assing the time stamp
