@@ -6,7 +6,7 @@ import datetime
 from scipy.interpolate import interp1d # for afc correction
 from pathlib import Path
 
-import aceairsea
+from pyantarctica import aceairsea
 
 
 def ensure_tz_UTC(df):
@@ -72,8 +72,9 @@ def read_era5_data():
         :returns: a dataframe with the interpolated ERA-5 reanalysis data
     """
     era5_csv_file = Path('../ecmwf-download/data/ecmwf-on-track/era5-on-cruise-track-5min-legs0-4-nearest.csv')
+    era5_csv_file = Path('./data/ecmwf-on-track/era5-on-cruise-track-5min-legs0-4-nearest.csv')
     era5 = pd.read_csv(era5_csv_file)
-    if 0:
+    if 1:
         era5.rename(columns={
             '10m_u_component_of_neutral_wind':'u10n',
             '10m_v_component_of_neutral_wind':'v10n',
@@ -89,25 +90,25 @@ def read_era5_data():
             'friction_velocity':'zust',
             'high_cloud_cover':'hcc',
             'land_sea_mask':'lsm',
-            'lsp':'large_scale_precipitation',
-            'lsf':'large_scale_snowfall',
-            'lcc':'low_cloud_cover',
-            'mdts':'mean_direction_of_total_swell',
-            'mdww':'mean_direction_of_wind_waves',
-            'msqs':'mean_square_slope_of_waves',
-            'mslhf':'mean_surface_latent_heat_flux',
-            'msshf':'mean_surface_sensible_heat_flux',
-            'mcc':'medium_cloud_cover',
-            'pp1d':'peak_wave_period',
-            'tmax':'period_corresponding_to_maximum_individual_wave_height',
-            'siconc':'sea_ice_cover',
-            'sst':'sea_surface_temperature',
-            'shts':'significant_height_of_total_swell',
-            'shww':'significant_height_of_wind_waves',
-            'skt':'skin_temperature',
-            'tcc':'total_cloud_cover',
-            'tciw':'total_column_cloud_ice_water',
-            'tclw':'total_column_cloud_liquid_water'
+            'large_scale_precipitation':'lsp',
+            'large_scale_snowfall':'lsf',
+            'low_cloud_cover':'lcc',
+            #'mdts':'mean_direction_of_total_swell',
+            #'mdww':'mean_direction_of_wind_waves',
+            #'msqs':'mean_square_slope_of_waves',
+            'mean_surface_latent_heat_flux':'mslhf',
+            'mean_surface_sensible_heat_flux':'msshf',
+            #'mcc':'medium_cloud_cover',
+            #'pp1d':'peak_wave_period',
+            #'tmax':'period_corresponding_to_maximum_individual_wave_height',
+            'sea_ice_cover':'siconc',
+            'sea_surface_temperature':'sst',
+            #'shts':'significant_height_of_total_swell',
+            #'shww':'significant_height_of_wind_waves',
+            'skin_temperature':'skt',
+            #'tcc':'total_cloud_cover',
+            #'tciw':'total_column_cloud_ice_water',
+            #'tclw':'total_column_cloud_liquid_water'
         }, inplace=True)
 
     if ('timest_' in era5.columns):

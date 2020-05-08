@@ -17,22 +17,7 @@ from pyantarctica import windvectorcoordinates as wvc
 from pyantarctica import aceairsea as aceairsea 
 from pyantarctica import dataset as dataset
 
-def outliers_iqr_noise(ys, noise):
-    """
-        Function to detect outliers based on the inter quartile range criterion but accounting for digital noise
-
-        :param ys: some kind of array
-        :param noise: float value (noise leve in units of ys) this is to avoid massive detection of false outliers if the true signal is constant and the random noise level exceeds the IQR
-        :returns: list of indecees of data points that exceed the IQR by more then 1.5*IQR AND more than the 'noise level' 
-    """
-    
-    quartile_1, quartile_3 = np.percentile(ys, [25, 75])
-    iqr = quartile_3 - quartile_1
-    iqr = np.max([iqr, noise/1.5])
-    lower_bound = quartile_1 - (iqr * 1.5) # was 1.5
-    upper_bound = quartile_3 + (iqr * 1.5) # was 1.5
-    outliers = np.where((ys > upper_bound) | (ys < lower_bound))
-    return outliers
+from pyantarctica.datafilter import outliers_iqr_noise
 
 
 def Rdir_bin_intervals(R1,A1,QC,binl,binu,min_in_bin=12,find_IQR_outlier=True,NOISE=0.1, Weights_a=[], BOOTSTRAP=False):
@@ -469,8 +454,8 @@ if __name__ == "__main__":
     from pathlib import Path
 
     # import local functionalities
-    import aceairsea as aceairsea 
-    import windvectorcoordinates as wvc
+    from pyantarctica import aceairsea as aceairsea 
+    from pyantarctica import windvectorcoordinates as wvc
     import read_ace_data as read_ace_data
     
     
@@ -722,7 +707,7 @@ if __name__ == "__main__":
     wind_c_CF['10m_neutral_wind_speed'] = u10
     #10m_v_component_of_neutral_wind
     
-    if 1: # safing for asaid
+    if 0: # safing for asaid
         df_u10 = pd.DataFrame({'u10':u10,'dir10':dir10,'u_afc':u,'v_afc':v,'uR_afc':uR,'vR_afc':vR})#, 'u10_QC': u10_QC})
         # WARNING here I CHANGE the time stamp label to interval end!!!
         df_u10 = df_u10.set_index(wind_c.index+datetime.timedelta(seconds=(5*60*.5))) # change labelling to interval end!!!!!
