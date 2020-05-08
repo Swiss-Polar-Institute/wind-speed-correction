@@ -142,7 +142,7 @@ def read_era5_data():
 
 
 def read_and_filter_wind_data():
-    wind_csv_file_folder = './data/summary_raw_wind_data_fr_11/'
+    wind_csv_file_folder = './data/summary_raw_wind_data_fr_12/'
     wind_csv_file_name0 = 'metdata_wind_20161117_20161216.csv'
     wind_csv_file_name1 = 'metdata_wind_20161220_20170118.csv'
     wind_csv_file_name2 = 'metdata_wind_20170122_20170223.csv'
