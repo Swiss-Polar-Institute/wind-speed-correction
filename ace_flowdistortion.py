@@ -459,7 +459,6 @@ if __name__ == "__main__":
     import read_ace_data as read_ace_data
     
     
-    FOLD_out = '../local_data/intermediate/ship_data/'
     FOLD_out = './data/afc_correction_factors/'
     AFC_BASE_FILE_NAME = 'afc_era5_high_res_sensor'
     afc_correction_factor_files = str(Path(FOLD_out, AFC_BASE_FILE_NAME))
@@ -469,6 +468,17 @@ if __name__ == "__main__":
     
     Zanemometer = 31.5 # estimated height of the anemometer above mean sea level [meter]
     
+    # create the output folders if not existent
+    Path(FOLD_out).mkdir(parents=True, exist_ok=True)
+    Path(FOLD_out+'wind_data_corrected_fivemin/').mkdir(parents=True, exist_ok=True)
+    Path(FOLD_out+'wind_data_corrected_onemin/').mkdir(parents=True, exist_ok=True)
+    Path(FOLD_out+'wind_data_uncorrected_fivemin/').mkdir(parents=True, exist_ok=True)
+    Path(FOLD_out+'wind_data_uncorrected_onemin/').mkdir(parents=True, exist_ok=True)
+    Path(FOLD_out+'wind_data_corrected_combined_fivemin/').mkdir(parents=True, exist_ok=True)
+        
+
+    Path(plot_folder).mkdir(parents=True, exist_ok=True)
+
     # read all required data
     ###################################
     # wind/gps-velocity data at 1 minute
@@ -608,14 +618,6 @@ if __name__ == "__main__":
     afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') )
     afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') )
     
-    if 1:
-        WSR_ERAminus5perc, WDR_ERAminus5perc = wvc.WSWD2WSRWDR(era5.WS30*0.95,era5.WDIR,wind_m.HEADING,wind_m.velEast,wind_m.velNorth) # basline
-        _, afc_s1_ERAminus5perc = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR1,wind_m.WSR1,WDR_ERAminus5perc,WSR_ERAminus5perc,S0=era5.WS10N, QC=(radqc_s1.QC), BOOTSTRAP=BOOTSTRAP, high_res=False,find_IQR_outlier=False, Weights_a=Weights_a1  )
-        _, afc_s2_ERAminus5perc = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR2,wind_m.WSR2,WDR_ERAminus5perc,WSR_ERAminus5perc,S0=era5.WS10N, QC=(radqc_s2.QC), BOOTSTRAP=BOOTSTRAP, high_res=False,find_IQR_outlier=False, Weights_a=Weights_a2  )
-
-        afc_s1_ERAminus5perc.to_csv( Path( FOLD_out + 'afc_era5-5perc_sensor1.csv') )
-        afc_s2_ERAminus5perc.to_csv( Path( FOLD_out + 'afc_era5-5perc_sensor2.csv') )
-
     
     wind_c = read_ace_data.wind_merge_gps_afc_option(afc_correction_factor_files=afc_correction_factor_files)
     
@@ -693,7 +695,7 @@ if __name__ == "__main__":
     
     zeta30, z30 = zeta_zu_zL_limited(era5['LMO']*np.square(uz/era5['WS30']),Zanemometer) # scale LMO with u10ratio^2  # this adjustment avoids overshooting corrections
     
-    u10 = aceairsea.coare_u2ustar(aceairsea.coare_u2ustar(uz, input_string='u2ustar', coare_version='coare3.5', TairC=TairC, z=z30, zeta=zeta30), input_string='ustar2u', coare_version='coare3.5', TairC=TairC, z=10, zeta=0)
+    u10N = aceairsea.coare_u2ustar(aceairsea.coare_u2ustar(uz, input_string='u2ustar', coare_version='coare3.5', TairC=TairC, z=z30, zeta=zeta30), input_string='ustar2u', coare_version='coare3.5', TairC=TairC, z=10, zeta=0)
 
     wind_c_CF = wind_c_CF_stbd.copy()
     wind_c_CF['wind_from_direction_relative_to_platform'] = (180-np.rad2deg(np.arctan2(vR,uR) ) )%360
@@ -704,11 +706,15 @@ if __name__ == "__main__":
     wind_c_CF['portward_relative_wind'] = vR
     wind_c_CF['eastward_wind'] = u
     wind_c_CF['northward_wind'] = v
-    wind_c_CF['10m_neutral_wind_speed'] = u10
-    #10m_v_component_of_neutral_wind
+    wind_c_CF['10m_neutral_wind_speed'] = u10N
+    wind_c_CF['10m_eastward_component_of_neutral_wind'] = u10N/uz*u
+    wind_c_CF['10m_northward_component_of_neutral_wind'] = u10N/uz*v
+
+    wind_c_CF_stbd.to_csv('./data/wind_data_corrected_combined_fivemin/wind-observations-port-stbd-corrected-combined-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+
     
-    if 0: # safing for asaid
-        df_u10 = pd.DataFrame({'u10':u10,'dir10':dir10,'u_afc':u,'v_afc':v,'uR_afc':uR,'vR_afc':vR})#, 'u10_QC': u10_QC})
+    if 1: # saving for asaid
+        df_u10 = pd.DataFrame({'u10':u10N,'dir10':dir10,'u_afc':u,'v_afc':v,'uR_afc':uR,'vR_afc':vR})#, 'u10_QC': u10_QC})
         # WARNING here I CHANGE the time stamp label to interval end!!!
         df_u10 = df_u10.set_index(wind_c.index+datetime.timedelta(seconds=(5*60*.5))) # change labelling to interval end!!!!!
         df_u10.rename_axis('timest_',axis="index",inplace=True) #Alter the name of the index or columns.

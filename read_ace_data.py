@@ -34,7 +34,8 @@ def read_assimilation_list():
     # TODO change path
     UBXH3_file = Path('./data/ubxh3_assimilation_list/77040_UBXH3_2017012618_2017021818.txt')
     # read UTC, latitude, longitude of occations where station UBXH3 was assimilated into the IFS
-    UBXH3_assimilated = pd.read_csv(UBXH3_file, header=None, delimiter=' +', parse_dates={'date_time':[1, 2]}, names=['station',  'yyyymmdd', 'hh', 'latitude', 'longitude'], engine='python')
+    #UBXH3_assimilated = pd.read_csv(UBXH3_file, header=None, delimiter=' +', parse_dates={'date_time':[1, 2]}, names=['station',  'yyyymmdd', 'hh', 'latitude', 'longitude'], engine='python')
+    UBXH3_assimilated = pd.read_csv(UBXH3_file, delimiter=' +', parse_dates={'date_time':[1, 2]}, engine='python')
     UBXH3_assimilated.set_index( (pd.to_datetime(UBXH3_assimilated.date_time, format="%Y-%m-%d %H:%M:%S")), drop=True, inplace=True )
     UBXH3_assimilated.drop(columns=['date_time'], inplace=True)
     UBXH3_assimilated=UBXH3_assimilated.tz_localize(tz='UTC')
@@ -71,8 +72,7 @@ def read_era5_data():
 
         :returns: a dataframe with the interpolated ERA-5 reanalysis data
     """
-    era5_csv_file = Path('../ecmwf-download/data/ecmwf-on-track/era5-on-cruise-track-5min-legs0-4-nearest.csv')
-    era5_csv_file = Path('./data/ecmwf-on-track/era5-on-cruise-track-5min-legs0-4-nearest.csv')
+    era5_csv_file = Path('../ecmwf-interpolation-to-cruise-track/data/ecmwf-era5-interpolated-to-cruise-track/era5-on-cruise-track-5min-legs0-4-nearest.csv')
     era5 = pd.read_csv(era5_csv_file)
     if 1:
         era5.rename(columns={
