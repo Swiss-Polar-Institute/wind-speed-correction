@@ -52,6 +52,7 @@ def read_distance2land():
     # TODO change path
     # NOTE UNITS OF distance are in meter!
     dist2land_file = Path('../cruise-track-distance-to-land/data/distance_to_land_corrected_on_small_islands/dist_to_land_incl_small_islands.csv')
+    dist2land_file = Path('./data/distance_to_the_nearest_10/dist_to_land_incl_small_islands.csv')
     dist2land = pd.read_csv(dist2land_file)
     if ('timest_' in dist2land.columns):
         dist2land.rename(columns={'timest_': 'date_time'}, inplace=True)
@@ -73,6 +74,7 @@ def read_era5_data():
         :returns: a dataframe with the interpolated ERA-5 reanalysis data
     """
     era5_csv_file = Path('../ecmwf-interpolation-to-cruise-track/data/ecmwf-era5-interpolated-to-cruise-track/era5-on-cruise-track-5min-legs0-4-nearest.csv')
+    era5_csv_file = Path('./data/era5_reanalysis_results_10/era5-on-cruise-track-5min-legs0-4-nearest.csv')
     era5 = pd.read_csv(era5_csv_file)
     if 1:
         era5.rename(columns={
