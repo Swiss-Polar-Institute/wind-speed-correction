@@ -294,6 +294,18 @@ def wind_merge_gps_afc_option(afc_correction_factor_files=[]):
         afc_loess1 = pd.read_csv(afc_correction_factor_files+'1.csv')
         afc_loess2 = pd.read_csv(afc_correction_factor_files+'2.csv')
         
+        if "R" not in afc_loess1.columns:
+            afc_loess1.rename(columns={
+                'R': 'R',
+                'A': 'A',
+                'D': 'D',
+                'A_median': 'A_median',
+                'D_median': 'D_median',
+                'A_err': 'A_err',
+                'D_err': 'D_err',
+                'samples': 'samples'
+            }, inplace=True)
+        
         afc_loess1=afc_expand(afc_loess1)
         afc_loess2=afc_expand(afc_loess2)
 

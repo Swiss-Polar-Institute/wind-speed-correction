@@ -706,9 +706,9 @@ if __name__ == "__main__":
     wind_c_CF['portward_relative_wind'] = vR
     wind_c_CF['eastward_wind'] = u
     wind_c_CF['northward_wind'] = v
-    wind_c_CF['10m_neutral_wind_speed'] = u10N
-    wind_c_CF['10m_eastward_component_of_neutral_wind'] = u10N/uz*u
-    wind_c_CF['10m_northward_component_of_neutral_wind'] = u10N/uz*v
+    wind_c_CF['speed_of_10m_neutral_wind'] = u10N
+    wind_c_CF['eastward_component_of_10m_neutral_wind'] = u10N/uz*u
+    wind_c_CF['northward_component_of_10m_neutral_wind'] = u10N/uz*v
 
     wind_c_CF_stbd.to_csv('./data/wind_data_corrected_combined_fivemin/wind-observations-port-stbd-corrected-combined-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
 
