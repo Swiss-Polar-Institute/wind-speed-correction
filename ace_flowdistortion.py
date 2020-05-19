@@ -187,14 +187,7 @@ def tryoshnikov_afc(t,d,s,D,S, QC, high_res=False,find_IQR_outlier=False, BOOTST
     # afc data
     radqc_ = pd.DataFrame({'R':R,'A':A,'D':dD,'QC':QC,'outliers':outliers})
     
-    afc_ = afc_.rename(columns={'R':'wind_from_direction_relative_to_platform', 
-                                'A': 'mean_of_wind_speed_bias',
-                                'D': 'mean_of_wind_direction_bias',
-                                'A_median': 'median_of_wind_speed_bias',
-                                'D_median': 'median_of_wind_direction_bias',
-                                'A_err': 'uncertainty_of_wind_speed_bias',
-                                'D_err': 'uncertainty_of_wind_direction_bias',
-                                'samples': 'number_of_samples'})
+
     
     return radqc_, afc_
 
@@ -379,14 +372,6 @@ def tryoshnikov_afc_unique(t,d,s,D,S,S0, QC, high_res=False,find_IQR_outlier=Fal
     # afc data
     radqc_ = pd.DataFrame({'R':R,'A':A,'D':dD,'QC':QC,'outliers':outliers})
     
-    afc_ = afc_.rename(columns={'R':'wind_from_direction_relative_to_platform', 
-                                'A': 'mean_of_wind_speed_bias',
-                                'D': 'mean_of_wind_direction_bias',
-                                'A_median': 'median_of_wind_speed_bias',
-                                'D_median': 'median_of_wind_direction_bias',
-                                'A_err': 'uncertainty_of_wind_speed_bias',
-                                'D_err': 'uncertainty_of_wind_direction_bias',
-                                'samples': 'number_of_samples'})
 
     return radqc_, afc_
 
@@ -633,6 +618,23 @@ if __name__ == "__main__":
     radqc_s2, afc_s2 = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR2,wind_m.WSR2,era5.WDR,era5.WSR,S0=era5.WS10N, QC=QC2, high_res=HIGH_RES,find_IQR_outlier=True, BOOTSTRAP=BOOTSTRAP, Weights_a=Weights_a2, Weights_d=Weights_d2  )
     print("... done!")
     
+    afc_s1 = afc_s1.rename(columns={'R':'wind_from_direction_relative_to_platform', 
+                            'A': 'mean_of_wind_speed_bias',
+                            'D': 'mean_of_wind_direction_bias',
+                            'A_median': 'median_of_wind_speed_bias',
+                            'D_median': 'median_of_wind_direction_bias',
+                            'A_err': 'uncertainty_of_wind_speed_bias',
+                            'D_err': 'uncertainty_of_wind_direction_bias',
+                            'samples': 'number_of_samples'})
+
+    afc_s2 = afc_s2.rename(columns={'R':'wind_from_direction_relative_to_platform', 
+                        'A': 'mean_of_wind_speed_bias',
+                        'D': 'mean_of_wind_direction_bias',
+                        'A_median': 'median_of_wind_speed_bias',
+                        'D_median': 'median_of_wind_direction_bias',
+                        'A_err': 'uncertainty_of_wind_speed_bias',
+                        'D_err': 'uncertainty_of_wind_direction_bias',
+                        'samples': 'number_of_samples'})
     
     afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') , index=False )
     afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') , index=False )
