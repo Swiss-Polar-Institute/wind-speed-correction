@@ -462,7 +462,7 @@ if __name__ == "__main__":
     FOLD_out = './data/afc_correction_factors/'
     AFC_BASE_FILE_NAME = 'afc_era5_high_res_sensor'
     afc_correction_factor_files = str(Path(FOLD_out, AFC_BASE_FILE_NAME))
-    plot_folder = '../plots/'
+    plot_folder = './plots/'
     BOOTSTRAP = True # flag to calculate bin error form weighter mean formular of via bootstrap
     HIGH_RES = True # change this to true for better resolution of the correction factors (rejects 2% more outliers)
     
@@ -470,11 +470,11 @@ if __name__ == "__main__":
     
     # create the output folders if not existent
     Path(FOLD_out).mkdir(parents=True, exist_ok=True)
-    Path(FOLD_out+'wind_data_corrected_fivemin/').mkdir(parents=True, exist_ok=True)
-    Path(FOLD_out+'wind_data_corrected_onemin/').mkdir(parents=True, exist_ok=True)
-    Path(FOLD_out+'wind_data_uncorrected_fivemin/').mkdir(parents=True, exist_ok=True)
-    Path(FOLD_out+'wind_data_uncorrected_onemin/').mkdir(parents=True, exist_ok=True)
-    Path(FOLD_out+'wind_data_corrected_combined_fivemin/').mkdir(parents=True, exist_ok=True)
+    Path('./data/wind_data_corrected_fivemin/').mkdir(parents=True, exist_ok=True)
+    Path('./data/wind_data_corrected_onemin/').mkdir(parents=True, exist_ok=True)
+    Path('./data/wind_data_uncorrected_fivemin/').mkdir(parents=True, exist_ok=True)
+    Path('./data/wind_data_uncorrected_onemin/').mkdir(parents=True, exist_ok=True)
+    Path('./data/wind_data_corrected_combined_fivemin/').mkdir(parents=True, exist_ok=True)
         
 
     Path(plot_folder).mkdir(parents=True, exist_ok=True)
@@ -694,8 +694,8 @@ if __name__ == "__main__":
     TairC=era5.T2M
     
     zeta30, z30 = zeta_zu_zL_limited(era5['LMO']*np.square(uz/era5['WS30']),Zanemometer) # scale LMO with u10ratio^2  # this adjustment avoids overshooting corrections
-    
-    u10N = aceairsea.coare_u2ustar(aceairsea.coare_u2ustar(uz, input_string='u2ustar', coare_version='coare3.5', TairC=TairC, z=z30, zeta=zeta30), input_string='ustar2u', coare_version='coare3.5', TairC=TairC, z=10, zeta=0)
+    ustar = aceairsea.coare_u2ustar(uz, input_string='u2ustar', coare_version='coare3.5', TairC=TairC, z=z30, zeta=zeta30)
+    u10N = aceairsea.coare_u2ustar(ustar, input_string='ustar2u', coare_version='coare3.5', TairC=TairC, z=10, zeta=0)
 
     wind_c_CF = wind_c_CF_stbd.copy()
     wind_c_CF['wind_from_direction_relative_to_platform'] = (180-np.rad2deg(np.arctan2(vR,uR) ) )%360
@@ -713,7 +713,7 @@ if __name__ == "__main__":
     wind_c_CF_stbd.to_csv('./data/wind_data_corrected_combined_fivemin/wind-observations-port-stbd-corrected-combined-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
 
     
-    if 1: # saving for asaid
+    if 0: # saving for asaid
         df_u10 = pd.DataFrame({'u10':u10N,'dir10':dir10,'u_afc':u,'v_afc':v,'uR_afc':uR,'vR_afc':vR})#, 'u10_QC': u10_QC})
         # WARNING here I CHANGE the time stamp label to interval end!!!
         df_u10 = df_u10.set_index(wind_c.index+datetime.timedelta(seconds=(5*60*.5))) # change labelling to interval end!!!!!
