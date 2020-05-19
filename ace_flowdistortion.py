@@ -731,19 +731,8 @@ if __name__ == "__main__":
     wind_c_CF['eastward_component_of_10m_neutral_wind'] = u10N/uz*u
     wind_c_CF['northward_component_of_10m_neutral_wind'] = u10N/uz*v
 
-    wind_c_CF_stbd.to_csv('./data/wind_data_corrected_combined_fivemin/wind-observations-port-stbd-corrected-combined-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+    wind_c_CF.to_csv('./data/wind_data_corrected_combined_fivemin/wind-observations-port-stbd-corrected-combined-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
 
-    
-    if 0: # saving for asaid
-        df_u10 = pd.DataFrame({'u10':u10N,'dir10':dir10,'u_afc':u,'v_afc':v,'uR_afc':uR,'vR_afc':vR})#, 'u10_QC': u10_QC})
-        # WARNING here I CHANGE the time stamp label to interval end!!!
-        df_u10 = df_u10.set_index(wind_c.index+datetime.timedelta(seconds=(5*60*.5))) # change labelling to interval end!!!!!
-        df_u10.rename_axis('timest_',axis="index",inplace=True) #Alter the name of the index or columns.
-        df_u10 = df_u10.tz_convert(None)
-        df_u10.to_csv(Path('../asaid/data/raw/0_shipdata/', 'u10_ship_5min_full.csv'))
-
-    #df_u10.to_csv(Path(FOLD_out, 'u10_ship_5min_full.csv'))
-    
     
     
 
