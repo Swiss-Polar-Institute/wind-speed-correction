@@ -1,6 +1,19 @@
-# flow distortion correction for the ACE data set
 #
-# can be run as script
+# Copyright 2017-2018 - Swiss Data Science Center (SDSC) and ACE-DATA/ASAID Project consortium. 
+# A partnership between École Polytechnique Fédérale de Lausanne (EPFL) and
+# Eidgenössische Technische Hochschule Zürich (ETHZ). 
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import pandas as pd
 import numpy as np
@@ -431,7 +444,11 @@ def expected_relative_wind(era5, wind_m, Zanemometer):
     return era5
 
 def flag_4DVAR_affected_data(UBXH3_assimilated, wind_m):
+    """
+        Function to read the list of assimilation events and derive a flag to exclude potentially affected data
 
+        :returns: a dataframe with a flag that can be used to identify observations that may be affected by 4DVAR assimilation of wind data that was reported from the Akademik Tryoshnikov under the sation id UBXH3
+    """
     # returns data frame with unified time stamp and column '4DVAR' = 1 if data is affected 
     # assume 9:00 to 21:00 and 21:00 to 9:00 windows are affected if one reading is within
     UBXH3_assimilated['4DVAR']=1
@@ -482,13 +499,15 @@ if __name__ == "__main__":
 
     Path(plot_folder).mkdir(parents=True, exist_ok=True)
 
+    ###################################
     # read all required data
     ###################################
+    
     # wind/gps-velocity data at 1 minute
     wind_m = read_ace_data.wind_merge_gps_afc_option(afc_correction_factor_files=[])
     
     if 1:
-        # resample to 1 minutes
+        # resample to 1 minutes and save the result
         wind_1min = wvc.resample_wind_data(wind_m, Nmin=1, interval_center='odd', lon_flip_tollerance=0.0005)
         wind_1min.latitude = wind_1min.latitude.interpolate()
         wind_1min.longitude = wind_1min.longitude.interpolate()
@@ -515,8 +534,8 @@ if __name__ == "__main__":
                                                         'v2' : 'northward_wind',
                                                        })
 
-        wind_m_CF_stbd.to_csv('./data/wind_data_uncorrected_onemin/wind-observations-stbd-uncorrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
-        wind_m_CF_port.to_csv('./data/wind_data_uncorrected_onemin/wind-observations-port-uncorrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+        wind_m_CF_stbd.to_csv('./data/wind_data_uncorrected_onemin/wind-observations-stbd-uncorrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN", float_format='%.4f')
+        wind_m_CF_port.to_csv('./data/wind_data_uncorrected_onemin/wind-observations-port-uncorrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN", float_format='%.4f')
 
 
     
@@ -528,6 +547,7 @@ if __name__ == "__main__":
     wind_m.longitude = wind_m.longitude.interpolate()
     
     if 1:
+        # save the 5-minute data
         wind_m_CF_stbd = wind_m[['latitude','longitude', 'WDR1', 'WSR1','WD1','WS1','uR1', 'vR1', 'u1', 'v1']].copy()
         wind_m_CF_port = wind_m[['latitude','longitude', 'WDR2', 'WSR2','WD2','WS2','uR2', 'vR2', 'u2', 'v2']].copy()
 
@@ -549,8 +569,8 @@ if __name__ == "__main__":
                                                         'u2' : 'eastward_wind',
                                                         'v2' : 'northward_wind',
                                                        })
-        wind_m_CF_stbd.to_csv('./data/wind_data_uncorrected_fivemin/wind-observations-stbd-uncorrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
-        wind_m_CF_port.to_csv('./data/wind_data_uncorrected_fivemin/wind-observations-port-uncorrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+        wind_m_CF_stbd.to_csv('./data/wind_data_uncorrected_fivemin/wind-observations-stbd-uncorrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN", float_format='%.4f')
+        wind_m_CF_port.to_csv('./data/wind_data_uncorrected_fivemin/wind-observations-port-uncorrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN", float_format='%.4f')
     
     era5 = read_ace_data.read_era5_data()
     dist2land = read_ace_data.read_distance2land()
@@ -571,6 +591,8 @@ if __name__ == "__main__":
         
     ###################################
     # estimate expected error in WSR_Model
+    ###################################
+    
     WSR_err, WDR_err = wvc.WSRWDR_uncertainy(era5.WS30,era5.WDIR,wind_m.HEADING,wind_m.velEast,wind_m.velNorth,a_WSPD=1.2,d_WDIR=10)
     a1_err = np.sqrt(np.square(0.01)+np.square(WSR_err*wind_m.WSR1/era5.WSR/era5.WSR) ) # the (absolute) error in a1 estimate is given by
     Weights_a1=(1/np.square(a1_err))
@@ -607,9 +629,10 @@ if __name__ == "__main__":
     print('stbd: QC passed by '+str(np.sum(QC2))+' of '+ str(np.sum(wind_m.WS1>-1)) + ' samples; fraction of data used '+  str(np.sum(QC2)/np.sum(wind_m.WS2>-1)) )
 
     
-    
+    ###################################
     # calculate the correction factors
-    # 
+    ###################################
+    
     print("Calculating the flowdistortion bias of sensor 1 (starboard)")
     radqc_s1, afc_s1 = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR1,wind_m.WSR1,era5.WDR,era5.WSR,S0=era5.WS10N, QC=QC1, high_res=HIGH_RES,find_IQR_outlier=True, BOOTSTRAP=BOOTSTRAP, Weights_a=Weights_a1, Weights_d=Weights_d1  )
     print("... done!")
@@ -636,9 +659,12 @@ if __name__ == "__main__":
                         'D_err': 'uncertainty_of_wind_direction_bias',
                         'samples': 'number_of_samples'})
     
-    afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') , index=False )
-    afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') , index=False )
+    afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') , index=False , float_format='%.4f')
+    afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') , index=False , float_format='%.4f')
     
+    ###################################
+    # calculate the corrected wind speed and direction
+    ###################################
     
     wind_c = read_ace_data.wind_merge_gps_afc_option(afc_correction_factor_files=afc_correction_factor_files)
     
@@ -670,8 +696,8 @@ if __name__ == "__main__":
                                                         'v2' : 'northward_wind',
                                                        })
 
-        wind_c_CF_stbd.to_csv('./data/wind_data_corrected_onemin/wind-observations-stbd-corrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
-        wind_c_CF_port.to_csv('./data/wind_data_corrected_onemin/wind-observations-port-corrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+        wind_c_CF_stbd.to_csv('./data/wind_data_corrected_onemin/wind-observations-stbd-corrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN", float_format='%.4f')
+        wind_c_CF_port.to_csv('./data/wind_data_corrected_onemin/wind-observations-port-corrected-1min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN", float_format='%.4f')
 
     
     
@@ -699,8 +725,8 @@ if __name__ == "__main__":
                                                         'u2' : 'eastward_wind',
                                                         'v2' : 'northward_wind',
                                                        })
-        wind_c_CF_stbd.to_csv('./data/wind_data_corrected_fivemin/wind-observations-stbd-corrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
-        wind_c_CF_port.to_csv('./data/wind_data_corrected_fivemin/wind-observations-port-corrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+        wind_c_CF_stbd.to_csv('./data/wind_data_corrected_fivemin/wind-observations-stbd-corrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN", float_format='%.4f')
+        wind_c_CF_port.to_csv('./data/wind_data_corrected_fivemin/wind-observations-port-corrected-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN", float_format='%.4f')
     
     
     # take the average of sensor 1 and sensor 2
@@ -731,7 +757,7 @@ if __name__ == "__main__":
     wind_c_CF['eastward_component_of_10m_neutral_wind'] = u10N/uz*u
     wind_c_CF['northward_component_of_10m_neutral_wind'] = u10N/uz*v
 
-    wind_c_CF.to_csv('./data/wind_data_corrected_combined_fivemin/wind-observations-port-stbd-corrected-combined-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN")
+    wind_c_CF.to_csv('./data/wind_data_corrected_combined_fivemin/wind-observations-port-stbd-corrected-combined-5min-legs0-4.csv',date_format="%Y-%m-%dT%H:%M:%S+00:00",na_rep="NaN", float_format='%.4f')
 
     
     

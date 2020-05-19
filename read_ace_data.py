@@ -1,4 +1,20 @@
-# List of functions to read the zenod datasets
+#
+# Copyright 2017-2018 - Swiss Data Science Center (SDSC) and ACE-DATA/ASAID Project consortium. 
+# A partnership between École Polytechnique Fédérale de Lausanne (EPFL) and
+# Eidgenössische Technische Hochschule Zürich (ETHZ). 
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 import pandas as pd
 import numpy as np
@@ -60,9 +76,6 @@ def read_distance2land():
     dist2land.drop(columns=['date_time'], inplace=True)
     
     dist2land = ensure_tz_UTC(dist2land)
-    
-    if 0: # Fix for local data no longer needed
-        dist2land.index = dist2land.index-pd.Timedelta(2.5,'min') # move time stamp to interval center
     
     return dist2land
 
@@ -144,6 +157,11 @@ def read_era5_data():
 
 
 def read_and_filter_wind_data():
+    """
+        Function to read the raw wind data from all 5 legs
+
+        :returns: a dataframe with the combined wind data with spurious observations removed
+    """
     wind_csv_file_folder = './data/summary_raw_wind_data_fr_12/'
     wind_csv_file_name0 = 'metdata_wind_20161117_20161216.csv'
     wind_csv_file_name1 = 'metdata_wind_20161220_20170118.csv'
@@ -169,9 +187,7 @@ def read_and_filter_wind_data():
     
     frames = [df_wind0, df_wind1, df_wind2, df_wind3, df_wind4] # concatenate the 4 wind data files
     df_wind = pd.concat(frames)
-    
-    #df_wind0=df_wind0.tz_localize(tz='UTC') # cause time stamp not with +00:00:00
-    
+       
     max_wind_WS = 40    # True wind speed maximum value (arbitrary)
     max_wind_WSR = 100 # bad data flaged with 999 # one spike in WSR2 at 700 
     # removes all bad directions (out of 0-360) for 1 but not for 2!
@@ -190,8 +206,6 @@ def read_and_filter_wind_data():
     df_wind.at[df_wind.WSR1>max_wind_WSR, 'WSR1'] = np.nan
 
     df_wind.at[df_wind.WS1>max_wind_WS, 'WD1'] = np.nan
-    #df_wind.at[df_wind.WS1>max_wind_WS, 'WDR1'] = np.nan
-    #df_wind.at[df_wind.WS1>max_wind_WS, 'WSR1'] = np.nan
     df_wind.at[df_wind.WS1>max_wind_WS, 'WS1'] = np.nan
 
     df_wind.at[df_wind.WSR2>max_wind_WSR, 'WD2'] = np.nan
@@ -200,8 +214,6 @@ def read_and_filter_wind_data():
     df_wind.at[df_wind.WSR2>max_wind_WSR, 'WSR2'] = np.nan
 
     df_wind.at[df_wind.WS2>max_wind_WS, 'WD2'] = np.nan
-    #df_wind.at[df_wind.WS2>max_wind_WS, 'WDR2'] = np.nan
-    #df_wind.at[df_wind.WS2>max_wind_WS, 'WSR2'] = np.nan
     df_wind.at[df_wind.WS2>max_wind_WS, 'WS2'] = np.nan
     
     # remove all W2 readings for WDR2>360
@@ -242,29 +254,22 @@ def read_and_filter_wind_data():
     return df_wind
 
 def read_minute_ship_track():
-    if 0:
-        gps_csv_file_folder = './data/?/'
-        gps_csv_file_folder = '../local_data/intermediate/ship_data/'
-        gps_csv_file_name = 'track_all_60seconds_filtered.csv'
+    """
+        Function to read the 1-minute resolution ship track velocity file
 
-        df_gps = pd.read_csv(gps_csv_file_folder+gps_csv_file_name)
-        df_gps.rename(columns={'timest_': 'date_time'}, inplace=True)
+        :returns: a dataframe with the data
+    """
+    gps_csv_file_folder = './data/oneminute_average_cruis_11/'
+    gps_csv_file_name = 'cruise-track-1min-legs0-4.csv'
+    df_gps = pd.read_csv(gps_csv_file_folder+gps_csv_file_name)
+    df_gps = df_gps.set_index(pd.to_datetime(df_gps.date_time, format="%Y-%m-%dT%H:%M:%S")) # assing the time stamp
+    df_gps.drop(columns=['date_time'], inplace=True)
 
-        df_gps = df_gps.set_index(pd.to_datetime(df_gps.date_time, format="%Y-%m-%d %H:%M:%S")) # assing the time stamp
-        df_gps.drop(columns=['date_time'], inplace=True)
-    
-    else:
-        gps_csv_file_folder = './data/oneminute_average_cruis_11/'
-        gps_csv_file_name = 'cruise-track-1min-legs0-4.csv'
-        df_gps = pd.read_csv(gps_csv_file_folder+gps_csv_file_name)
-        df_gps = df_gps.set_index(pd.to_datetime(df_gps.date_time, format="%Y-%m-%dT%H:%M:%S")) # assing the time stamp
-        df_gps.drop(columns=['date_time'], inplace=True)
-        
-        df_gps = df_gps.rename(columns={'platform_speed_wrt_sea_water_east':'velEast', 
-                                          'platform_speed_wrt_sea_water_north':'velNorth', 
-                                          'platform_orientation':'HEADING', 
-                                          'platform_course':'COG', 
-                                          'platform_speed_wrt_ground':'SOG'})
+    df_gps = df_gps.rename(columns={'platform_speed_wrt_sea_water_east':'velEast', 
+                                      'platform_speed_wrt_sea_water_north':'velNorth', 
+                                      'platform_orientation':'HEADING', 
+                                      'platform_course':'COG', 
+                                      'platform_speed_wrt_ground':'SOG'})
     
     return df_gps
 
@@ -283,6 +288,12 @@ def afc_expand(df):
     return df
 
 def wind_merge_gps_afc_option(afc_correction_factor_files=[]):
+    """
+        Function to merge the wind speed and ship track velocity data at 1 minute resolution
+        Optional the air flow distortion correction of the observed relative wind speed and direction is performed prior to the motion correction
+
+        :returns: a dataframe with the combined wind (true and relative) and ship velocity data
+    """
     merge_at_nseconds = 60
     df_gps = read_minute_ship_track();  print("read_minute_ship_track")
 
