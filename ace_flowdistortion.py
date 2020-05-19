@@ -186,7 +186,16 @@ def tryoshnikov_afc(t,d,s,D,S, QC, high_res=False,find_IQR_outlier=False, BOOTST
                          'A_err':(bin_data_A['y_err']), 'D_err':(bin_data_D['y_err']), 'samples':bin_data_A['samples']})
     # afc data
     radqc_ = pd.DataFrame({'R':R,'A':A,'D':dD,'QC':QC,'outliers':outliers})
-
+    
+    afc_ = afc_.rename(columns={'R':'wind_from_direction_relative_to_platform', 
+                                'A': 'mean_of_wind_speed_bias',
+                                'D': 'mean_of_wind_direction_bias',
+                                'A_median': 'median_of_wind_speed_bias',
+                                'D_median': 'median_of_wind_direction_bias',
+                                'A_err': 'uncertainty_of_wind_speed_bias',
+                                'D_err': 'uncertainty_of_wind_direction_bias',
+                                'samples': 'number_of_samples'})
+    
     return radqc_, afc_
 
 
@@ -369,6 +378,15 @@ def tryoshnikov_afc_unique(t,d,s,D,S,S0, QC, high_res=False,find_IQR_outlier=Fal
                          'A_err':(bin_data_A['y_err']), 'D_err':(bin_data_D['y_err']), 'samples':bin_data_A['samples']})
     # afc data
     radqc_ = pd.DataFrame({'R':R,'A':A,'D':dD,'QC':QC,'outliers':outliers})
+    
+    afc_ = afc_.rename(columns={'R':'wind_from_direction_relative_to_platform', 
+                                'A': 'mean_of_wind_speed_bias',
+                                'D': 'mean_of_wind_direction_bias',
+                                'A_median': 'median_of_wind_speed_bias',
+                                'D_median': 'median_of_wind_direction_bias',
+                                'A_err': 'uncertainty_of_wind_speed_bias',
+                                'D_err': 'uncertainty_of_wind_direction_bias',
+                                'samples': 'number_of_samples'})
 
     return radqc_, afc_
 
@@ -459,8 +477,8 @@ if __name__ == "__main__":
     import read_ace_data as read_ace_data
     
     
-    FOLD_out = './data/afc_correction_factors/'
-    AFC_BASE_FILE_NAME = 'afc_era5_high_res_sensor'
+    FOLD_out = './data/flow_distortion_bias/'
+    AFC_BASE_FILE_NAME = 'flow_distortion_bias_sensor'
     afc_correction_factor_files = str(Path(FOLD_out, AFC_BASE_FILE_NAME))
     plot_folder = './plots/'
     BOOTSTRAP = True # flag to calculate bin error form weighter mean formular of via bootstrap
@@ -615,8 +633,9 @@ if __name__ == "__main__":
     radqc_s2, afc_s2 = tryoshnikov_afc_unique(wind_m.index,wind_m.WDR2,wind_m.WSR2,era5.WDR,era5.WSR,S0=era5.WS10N, QC=QC2, high_res=HIGH_RES,find_IQR_outlier=True, BOOTSTRAP=BOOTSTRAP, Weights_a=Weights_a2, Weights_d=Weights_d2  )
     print("... done!")
     
-    afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') )
-    afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') )
+    
+    afc_s1.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '1.csv') , index=False )
+    afc_s2.to_csv( Path( FOLD_out + AFC_BASE_FILE_NAME + '2.csv') , index=False )
     
     
     wind_c = read_ace_data.wind_merge_gps_afc_option(afc_correction_factor_files=afc_correction_factor_files)

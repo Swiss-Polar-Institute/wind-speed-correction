@@ -291,19 +291,35 @@ def wind_merge_gps_afc_option(afc_correction_factor_files=[]):
     if len(afc_correction_factor_files)>0: # if afc data provided
         # interpolate onto wind series and calculate afc wind speed and direction
 
-        afc_loess1 = pd.read_csv(afc_correction_factor_files+'1.csv')
-        afc_loess2 = pd.read_csv(afc_correction_factor_files+'2.csv')
+        afc_loess1 = pd.read_csv(afc_correction_factor_files+'1.csv', index_col=False)
+        afc_loess2 = pd.read_csv(afc_correction_factor_files+'2.csv', index_col=False)
+        if 'Unnamed: 0' in afc_loess1.columns:
+            afc_loess1=afc_loess1.drop(columns={'Unnamed: 0'})
+        if 'Unnamed: 0' in afc_loess2.columns:
+            afc_loess2=afc_loess2.drop(columns={'Unnamed: 0'})
         
         if "R" not in afc_loess1.columns:
             afc_loess1.rename(columns={
-                'R': 'R',
-                'A': 'A',
-                'D': 'D',
-                'A_median': 'A_median',
-                'D_median': 'D_median',
-                'A_err': 'A_err',
-                'D_err': 'D_err',
-                'samples': 'samples'
+                'wind_from_direction_relative_to_platform': 'R',
+                'mean_of_wind_speed_bias': 'A',
+                'mean_of_wind_direction_bias': 'D',
+                'median_of_wind_speed_bias': 'A_median',
+                'median_of_wind_direction_bias': 'D_median',
+                'uncertainty_of_wind_speed_bias': 'A_err',
+                'uncertainty_of_wind_direction_bias': 'D_err',
+                'number_of_samples': 'samples'
+            }, inplace=True)
+            
+        if "R" not in afc_loess2.columns:
+            afc_loess2.rename(columns={
+                'wind_from_direction_relative_to_platform': 'R',
+                'mean_of_wind_speed_bias': 'A',
+                'mean_of_wind_direction_bias': 'D',
+                'median_of_wind_speed_bias': 'A_median',
+                'median_of_wind_direction_bias': 'D_median',
+                'uncertainty_of_wind_speed_bias': 'A_err',
+                'uncertainty_of_wind_direction_bias': 'D_err',
+                'number_of_samples': 'samples'
             }, inplace=True)
         
         afc_loess1=afc_expand(afc_loess1)
