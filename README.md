@@ -1,6 +1,6 @@
 # wind-speed-correction
 
-Analysis of the flowdistortion bias in the ship borne wind speed measurements from the [Antarctic Circumnavigation Experiment (ACE)](https://doi.org/10.5281/zenodo.1443511). We use ERA-5 reanalysis data to quantify the flowdistortion bias in the measured relative wind speed and direction as a function of the relative wind direction.
+Analysis of the flowdistortion bias in the ship borne wind speed measurements from the [Antarctic Circumnavigation Experiment (ACE)](https://doi.org/10.5281/zenodo.1443511). We use ERA-5 reanalysis data to quantify the flowdistortion bias in the measured relative wind speed and direction as a function of the relative wind direction. Please refer to and cite Landwehr et al. (2019; DOI: https://doi.org/10.5194/amt-2019-366).
 
 ## Using the code
 
