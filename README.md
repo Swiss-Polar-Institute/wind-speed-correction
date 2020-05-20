@@ -26,6 +26,8 @@ ERA-5 reanalysis results interpolated onto the five-minute average cruise track 
 
 Distance to the nearest land/coastline (including small subantarctic islands) for the five-minute average cruise track of the Antarctic Circumnavigation Expedition (ACE) during the austral summer of 2016/2017. https://doi.org/10.5281/zenodo.3832045
 
+77040_UBXH3_2017012618_2017021818.txt provides a list of all the times that near surface wind observations were assimilated into ERA5 from station UBXH3 (the R/V Akademik Tryoshnikov used during ACE), during the period November 2016 to May 2017. The columns in the file are stationId, date (yyyymmdd; UTC), time (hh; UTC), latitude (degree_north), longitude (degree_east).
+
 All of the above datasets are available with a Creative Commons Attribution 4.0 International License (CC BY 4.0) whose full text can be found at https://creativecommons.org/licenses/by/4.0/
 
 ### Output datasets
