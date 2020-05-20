@@ -18,7 +18,7 @@ Note that [pyantarctica](https://github.com/Swiss-Polar-Institute/pyantarctica) 
 
 ### Running the code
 
-Amend paths to input and output dataset files.
+Amend paths to input and output dataset files in ```read_ace_data.py``` and ```ace_flowdistortion.py```.
 
 Then execute with python3:
 
