@@ -12,15 +12,7 @@ In order to run the code, the packages in requirements.txt should be installed:
 
 ```pip3 install -r requirements.txt```
 
-numpy==1.18.4
-pandas==1.0.3
-matplotlib==3.2.1
-DateTime==4.3
-scipy==1.4.1
-scikit-learn==0.23.0
-pathlib==1.0.1
-airsea==0.0.1
-git+https://github.com/Swiss-Polar-Institute/pyantarctica.git
+Note that [pyantarctica](https://github.com/Swiss-Polar-Institute/pyantarctica) requires an older version of pandas, but this code will run with the newer version of pandas=1.0.3.
 
 ### Input datasets
 
