@@ -14,6 +14,10 @@ In order to run the code, the packages in ```requirements.txt``` should be insta
 
 Note that [pyantarctica](https://github.com/Swiss-Polar-Institute/pyantarctica) requires an older version of pandas, but this code will run with the newer version of pandas=1.0.3.
 
+### Running the code
+
+```python3 ace_flowdistortion.py```
+
 ### Input datasets
 
 This repository can be used with the following input datasets.
