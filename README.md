@@ -8,7 +8,7 @@ An example of how these scripts can be used can be found in a [Gitlab repository
 
 ### Requirements
 
-In order to run the code, the packages in requirements.txt should be installed:
+In order to run the code, the packages in ```requirements.txt``` should be installed:
 
 ```pip3 install -r requirements.txt```
 
@@ -31,3 +31,4 @@ All of the above datasets are available with a Creative Commons Attribution 4.0 
 ### Output datasets
 
 Examples of the output datasets can be found in the Gitlab repositories or in the following publications: 
+TODO
