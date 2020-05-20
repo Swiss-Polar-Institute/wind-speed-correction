@@ -107,7 +107,7 @@ def Rdir_bin_intervals(R1,A1,QC,binl,binu,min_in_bin=12,find_IQR_outlier=True,NO
                     N_iter = 100
                     binMeans = np.arange(0,N_iter)*np.NaN
                     for j in np.arange(0,N_iter):
-                        A1_rs, weights_rs = resample( A1[in_bin==1],Weights_a[in_bin==1], random_state=42)
+                        A1_rs, weights_rs = resample( A1[in_bin==1],Weights_a[in_bin==1], random_state=j+42)
                         binMeans[j]=np.average(A1_rs, weights=weights_rs)
                         binErr = np.std(binMeans)
                 
@@ -286,7 +286,7 @@ def Rdir_bin_intervals_unique(R1,A1,S0,QC,binl,binu,min_in_bin=12,find_IQR_outli
                     for j in np.arange(0,N_iter):
                         #A1_rs, weights_rs = resample( A1[in_bin==1],Weights_a[in_bin==1])
                         
-                        A1_rs, weights_rs = resample( df[df.columns[0]].values,np.sqrt(df[df.columns[1]].values), random_state=42)
+                        A1_rs, weights_rs = resample( df[df.columns[0]].values,np.sqrt(df[df.columns[1]].values), random_state=j+42)
 
                         
                         binMeans[j]=np.average(A1_rs, weights=weights_rs)
